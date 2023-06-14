@@ -2,13 +2,28 @@
 
 Demo app that reproduces wrong dependency resolution by Snyk.
 
-## Build all the modules
+## The problem
+
+Snyk sees different version of a dependency than Maven/Spring package into fat JAR.
+
+Snyk reports no vulnerabilities when scanning Maven project.
+
+Snyk reports vulnerabilities only when scanning Docker image.
+
+## My understanding
+
+The app has the same transitive dependency in two different versions included via compile and test dependencies.
+Test-scoped dependency is closer to the root, so it is promoted to compile scope and that version is taken when creating a JAR.
+
+## Steps to reproduce
+
+### 1. Build all the modules
 
 ```
 mvn clean install
 ```
 
-## Build docker image
+### 2. Build docker image
 
 In root directory:
 
@@ -16,7 +31,7 @@ In root directory:
 docker build -t pkotrackunit/snyk-demo:latest .
 ```
 
-## Show app dependency tree
+### 3. Show app dependency tree
 
 ```
 cd app
@@ -57,7 +72,7 @@ The second library `zerocode-tdd` has `test` scope and includes vulnerable proto
 Newer version of `protobuf-java` "lost" to older one, due to being deeper in the tree.
 This is known and expected.
 
-## Check fat JAR
+### 4. Check fat JAR
 
 ```
 unzip -l app/target/app-0.0.1-SNAPSHOT.jar
@@ -65,7 +80,7 @@ unzip -l app/target/app-0.0.1-SNAPSHOT.jar
 
 The JAR has `BOOT-INF/lib/protobuf-java-3.13.0.jar`
 
-## Perform Snyk scan
+### 5. Perform Snyk scan
 
 ```
 cd app
@@ -88,7 +103,7 @@ Licenses:          enabled
 ✔ Tested 2 dependencies for known issues, no vulnerable paths found.
 ```
 
-## Scan container
+### 6. Scan container
 
 ```
 snyk container test pkotrackunit/snyk-demo:latest
@@ -145,7 +160,7 @@ To remove these messages in the future, please run `snyk config set disableSugge
 Tested 2 projects, 1 contained vulnerable paths.
 ```
 
-## Change scope of zerocode-tdd and rescan
+### 7. Change scope of zerocode-tdd and rescan
 
 Just for debugging, in [app/pom.xml](app/pom.xml) change scope of `zerocode-tdd` to `compile`:
 ```
